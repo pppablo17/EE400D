@@ -1,0 +1,27 @@
+int ldrStatus;
+int ldrFlag;
+const int ldrPin = A3; //For light sensor
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(ldrPin, INPUT); //For light sensor
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int ldrStatus = analogRead(ldrPin); //Light Sensor
+if (ldrStatus <= 300)// ldrStatus <= 400)
+  {
+    ldrFlag = 0;
+        Serial.println("Bright");
+  }
+  else
+  {
+        ldrFlag = 1;
+        
+    Serial.println("Dark");
+  }
+
+}
