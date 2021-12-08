@@ -1,0 +1,310 @@
+// Integrated so far: Movement, Manual Activation,
+#include <Arduino.h>
+
+//Declare all the variables being used here:
+int centerIR;
+int leftIR;
+int rightIR;
+int leftFlag;
+int centerFlag;
+int rightFlag;
+//Declare all the functions being used here:
+void deviateRight();
+void deviateLeft();
+void forward();
+void reverse();
+void stall();
+void car_mv();
+void mv_loop();
+void docking();
+
+#include <IRremote.h>  //including infrared remote header file  
+#define Button_1 0xFF30CF
+#define Button_2 0xFF18E7
+#define Button_3 0xFF7A85
+int RECV_PIN = 12; // the pin where you connect the output pin of IR sensor
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+uint32_t Previous;
+
+const int ldrPin = A3; //For light sensor
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(6, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(7, OUTPUT);
+  pinMode(8, OUTPUT);
+  digitalWrite(7, HIGH);
+  digitalWrite(8, HIGH);
+  Serial.begin(115200);
+
+  Serial.begin(9600);
+  irrecv.enableIRIn();
+
+  Serial.begin(9600);
+  pinMode(ldrPin, INPUT); //For light sensor
+}
+
+void loop() {
+
+  if (irrecv.decode(&results)) { //if we have received an IR signal
+    if (results.value == 0xFFFFFFFF) {
+      results.value = Previous;
+    }
+    int ldrStatus = analogRead(ldrPin); //Light Sensor
+    centerIR = analogRead(A0);
+    leftIR = analogRead(A1);
+    rightIR = analogRead(A2);
+    switch (results.value) {
+
+      case Button_1: //Movement and scent dispense
+        //car_mv(); break; //Button 1
+        mv_loop(); break;
+
+      case Button_2 :
+        stall(); break;
+      case Button_3 :
+        docking(); break; //Uses Light Sensor
+
+    }
+    Serial.println (results.value, HEX); //display HEX results
+    irrecv.resume(); //next value
+  }
+}
+
+//Function definitions go here:
+void reverse()
+{
+  Serial.println("Backing up");
+  digitalWrite(9, LOW);
+  analogWrite(6, 255); //analogWrite(6, 75);
+  analogWrite(11, 255); //analogWrite(11, 75);
+  digitalWrite(10, LOW);
+  delay(750); //default 1000
+}
+
+void stall()
+{
+  Serial.println("Stall");
+  digitalWrite(9, LOW);
+  analogWrite(6, 0); //analogWrite(6, 255);
+  analogWrite(11, 0); //analogWrite(11, 255);
+  digitalWrite(10, LOW);
+  delay(750); //default 1000
+}
+
+void deviateRight()
+{
+  Serial.println("Right");
+  reverse();
+  digitalWrite(6, LOW);
+  digitalWrite(9, LOW);
+  digitalWrite(11, LOW);
+  analogWrite(10, 350);
+  delay(300);
+}
+
+void deviateLeft()
+{
+  Serial.println("Left");
+  reverse();
+  analogWrite(9, 350);
+  digitalWrite(6, LOW);
+  digitalWrite(11, LOW);
+  digitalWrite(10, LOW);
+  delay(300);
+}
+
+void forward()
+{
+  Serial.println("Forward");
+  analogWrite(9, 175); //analogWrite(9, 75);
+  digitalWrite(6, LOW);
+  digitalWrite(11, LOW);
+  analogWrite(10, 175); //analogWrite(10, 75);
+}
+
+void car_mv()
+{
+  Serial.println("car_mv");
+
+  if (leftIR < 300)// (leftIR < 200)
+  {
+    leftFlag = 1;
+    Serial.println("L_Sensor");
+  }
+  else
+  {
+    leftFlag = 0;
+  }
+  if (rightIR < 300)// (rightIR < 200)
+  {
+    rightFlag = 1;
+    Serial.println("R_Sensor");
+  }
+  else
+  {
+    rightFlag = 0;
+  }
+
+  if (centerIR < 300)// (centerIR < 200)
+  {
+    centerFlag = 1;
+    Serial.println("C_Sensor");
+  }
+  else
+  {
+    centerFlag = 0;
+  }
+
+
+  if ((leftFlag == 1) || (rightFlag == 1) || (centerFlag == 1))
+  {
+
+    if (centerFlag == 1)
+    {
+      reverse(); //test
+      deviateRight();  //test
+      if (leftFlag == 1)
+      {
+        deviateRight();
+        forward(); //test
+      }
+
+      else if (rightFlag == 1)
+        deviateRight();  //test
+      forward(); //test
+
+    }
+    else if (leftFlag == 1)
+    {
+      deviateRight();
+      forward(); //test
+    }
+    else if (rightFlag == 1)
+    {
+
+      deviateRight();  //test
+      forward(); //test
+    }
+    else
+    {
+
+      deviateRight();  //test
+      forward(); //test
+    }
+  }
+  else
+  {
+    forward(); //Orignal else function, new code is to test movement with button properly
+  }
+}
+
+void mv_loop() {
+
+  while ((leftFlag == 0) || (rightFlag == 0) || (centerFlag == 0)) {
+    car_mv();
+
+  }
+}
+void docking() {
+  Serial.println("docking");
+
+  //Analog read for all three movement sensors above here
+  if (leftIR < 300)// (leftIR < 200)
+  {
+    leftFlag = 1;
+    Serial.println("L_Sensor");
+  }
+  else
+  {
+    leftFlag = 0;
+  }
+  if (rightIR < 300)// (rightIR < 200)
+  {
+    rightFlag = 1;
+    Serial.println("R_Sensor");
+  }
+  else
+  {
+    rightFlag = 0;
+  }
+
+  if (centerIR < 300)// (centerIR < 200)
+  {
+    centerFlag = 1;
+    Serial.println("C_Sensor");
+  }
+  else
+  {
+    centerFlag = 0;
+  }
+
+  if (ldrStatus <= 300)// ldrStatus <= 400)
+  {
+    ldrFlag = 0;
+    Serial.println("Bright");
+  }
+  else
+  {
+    ldrFlag = 1;
+    Serial.println("Dark");
+  }
+
+  if ((ldrFlag == 0) && (count > 1))
+  {
+    if ((ldrFlag == 0) && (leftFlag == 1) && (rightFlag == 1) && (centerFlag == 1))
+      stall();
+    else
+      forward();
+  }
+  else if ((leftFlag == 1) || (rightFlag == 1) || (centerFlag == 1))
+    if (centerFlag == 1)
+    {
+      reverse(); //test
+
+      deviateRight();  //test
+      if (leftFlag == 1)
+      {
+        //deviateLeft(); //test
+        deviateRight();
+        forward(); //test
+      }
+
+      else if (rightFlag == 1)
+        //deviateLeft();
+        deviateRight();  //test
+      forward(); //test
+      //else
+      //deviateLeft();
+      // forward(); //test
+    }
+    else if (leftFlag == 1)
+    {
+      //deviateRight(); //test
+      deviateRight();
+      forward(); //test
+    }
+    else if (rightFlag == 1)
+    {
+      //deviateLeft(); //test
+      //deviateLeft();
+      deviateRight();  //test
+      forward(); //test
+    }
+    else
+    {
+      // deviateLeft(); //test
+      //deviateLeft();
+      deviateRight();  //test
+      forward(); //test
+    }
+  else
+  {
+    forward();
+  }
+
+}
